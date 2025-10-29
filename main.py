@@ -1,47 +1,39 @@
-from collections import Counter
-import matplotlib.pyplot as plt
-from wordcloud import WordCloud
-import re
 import pandas as pd
+from collections import Counter
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+import sys
 
-# --- 1. Φόρτωση ελληνικού κειμένου ---
-with open("sample_text.txt", encoding="utf8") as f:
-    text = f.read().lower()
+# Προσπάθεια ανάγνωσης αρχείου κειμένου
+try:
+    with open("sample_text.txt", encoding="utf8") as f:
+        text = f.read()
+except FileNotFoundError:
+    print("❌ Το αρχείο sample_text.txt δεν βρέθηκε. Δημιούργησέ το και ξανατρέξε το πρόγραμμα.")
+    sys.exit(1)
 
-# --- 2. Καθαρισμός ---
-text = re.sub(r"[^α-ωάέήίόύώϊϋΐΰ\s]", " ", text)
-words = [w for w in text.split() if len(w) > 1]
+# Καθαρισμός κειμένου
+words = [w.strip(".,!;:()[]«»\"").lower() for w in text.split()]
+counts = Counter(words)
 
-# --- 3. Συχνότητα λέξεων ---
-counter = Counter(words)
-most_common = counter.most_common(10)
+# Εμφάνιση των 10 πιο συχνών λέξεων
+print("🔹 Οι 10 πιο συχνές λέξεις είναι:")
+for word, freq in counts.most_common(10):
+    print(f"{word}: {freq}")
 
-# --- 4. Εμφάνιση ---
-print("📊 10 πιο συχνές λέξεις:")
-for w, c in most_common:
-    print(f"{w}: {c}")
+# Δημιουργία word cloud
+wc = WordCloud(width=800, height=400, background_color="white")
+wc.generate_from_frequencies(counts)
+wc.to_file("wordcloud.png")
 
-# --- 5. Λεξικό συναισθήματος ---
-lexicon = pd.read_csv("sentiment_lexicon.csv")
-pos = set(lexicon[lexicon["sentiment"] == "positive"]["word"])
-neg = set(lexicon[lexicon["sentiment"] == "negative"]["word"])
-
-pos_count = sum(w in pos for w in words)
-neg_count = sum(w in neg for w in words)
-total = len(words)
-
-print(f"\n😊 Θετικό συναίσθημα: {pos_count / total * 100:.2f}%")
-print(f"☹️  Αρνητικό συναίσθημα: {neg_count / total * 100:.2f}%")
-
-# --- 6. Bar chart ---
-plt.bar([w for w, _ in most_common], [c for _, c in most_common])
-plt.title("Top 10 λέξεις στο κείμενο")
+# Δημιουργία ραβδογράμματος
+top_words = counts.most_common(10)
+words, freqs = zip(*top_words)
+plt.figure(figsize=(8, 5))
+plt.bar(words, freqs)
+plt.title("Top 10 λέξεις")
 plt.xticks(rotation=45)
 plt.tight_layout()
 plt.savefig("top_words.png")
-plt.show()
 
-# --- 7. Word Cloud ---
-wc = WordCloud(width=800, height=400, background_color="white", collocations=False).generate(" ".join(words))
-wc.to_file("wordcloud.png")
-print("\n📸 Αποθηκεύτηκαν τα αρχεία top_words.png & wordcloud.png")
+print("\n✅ Δημιουργήθηκαν τα αρχεία 'wordcloud.png' και 'top_words.png'.")
